@@ -122,7 +122,7 @@ app.post('/login', (req, res) => {
       return res.status(401).json({ error: '존재하지 않는 ID입니다.' })
     }
     const user = results[0]
-    const match = await bcrypt.compare(userpw, user.userpw)
+    const match = await bcrypt.compare(userpw, user.userpw) //해싱된 비밀번호와 입력된 비밀번호 비교
     if (!match) {
       return res.status(401).json({ error: '비밀번호가 틀렸습니다.' })
     }
