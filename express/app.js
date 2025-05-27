@@ -155,6 +155,7 @@ app.delete('/user', isAuthenticated, (req, res) => {
       if (err) {
         return res.status(500).json({ error: '세션 삭제 실패' })
       }
+      res.clearCookie('connect.sid') // 세션 쿠키 삭제
       res.status(200).json({ message: '회원탈퇴 완료', redirect: '/signup' })
     })
   })
