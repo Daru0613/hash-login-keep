@@ -33,7 +33,7 @@ app.use((req, res, next) => {
     '.ico',
     '.svg',
   ]
-  const isStatic = staticExts.some((ext) => req.path.endsWith(ext))
+  const isStatic = staticExts.some((ext) => req.path.endsWith(ext)) // 정적파일인지 확인
   // main.html, pyramid.html 직접 접근 차단은 GET 요청에만 적용
   if (
     req.method === 'GET' &&
@@ -134,6 +134,7 @@ app.post('/login', (req, res) => {
 // GET: 로그아웃 처리
 app.get('/logout', (req, res) => {
   req.session.destroy((err) => {
+    // 세션 삭제
     if (err) {
       return res.status(500).json({ error: '로그아웃 실패' })
     }
@@ -193,6 +194,7 @@ app.post('/theme', (req, res) => {
   const themeValue = theme === 'dark' ? 1 : 0
   connection.query(
     'UPDATE user SET theme = ? WHERE iduser = ?', //테마값 업데이트
+    // theme이 'dark'면 1, 'light'면 0으로 저장
     [themeValue, iduser],
     (err) => {
       if (err) return res.status(500).json({ error: 'DB 오류' })
