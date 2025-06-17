@@ -13,9 +13,9 @@ app.use(express.json())
 // 세션 설정
 app.use(
   session({
-    secret: 'your-secret-key',
+    secret: process.env.SESSION_SECRET,
     resave: false, // 세션이 변경되도 저장 X
-    saveUninitialized: false, // 초기화되지않은 세션 저장 X
+    saveUninitialized: true, // 초기화되지않은 세션 저장 X
     cookie: { secure: false }, // http 에서는 false로로
   })
 )
