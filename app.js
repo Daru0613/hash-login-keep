@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const bcrypt = require('bcrypt') // 비밀번호 해싱
 const session = require('express-session') // 세션관리
