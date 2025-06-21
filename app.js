@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const bcrypt = require('bcrypt') // 비밀번호 해싱
 const session = require('express-session') // 세션관리
-const connection = require('./mysql') //데이터베이스 연결
+const pool = require('./mysql') //데이터베이스 연결
 const path = require('path') // 파일 경로 처리
 
 const app = express()
@@ -93,7 +93,7 @@ app.post('/signup', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(userpw, 10) //비밀번호 해싱(10=보안강도)
     const query = 'INSERT INTO user (iduser, userpw) VALUES (?, ?)'
-    connection.query(query, [iduser, hashedPassword], (err, result) => {
+    pool.query(query, [iduser, hashedPassword], (err, result) => {
       //쿼리에 iduser와 해싱된 비밀번호 삽입
       if (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -115,7 +115,7 @@ app.post('/login', (req, res) => {
     return res.status(400).json({ error: 'ID와 비밀번호를 입력하시오.' })
   }
   const query = 'SELECT * FROM user WHERE iduser = ?'
-  connection.query(query, [iduser], async (err, results) => {
+  pool.query(query, [iduser], async (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'DB 오류: ' + err.message })
     }
@@ -148,7 +148,7 @@ app.get('/logout', (req, res) => {
 app.delete('/user', isAuthenticated, (req, res) => {
   const { iduser } = req.session.user
   const query = 'DELETE FROM user WHERE iduser = ?' //iduser로 회원탈퇴
-  connection.query(query, [iduser], (err) => {
+  pool.query(query, [iduser], (err) => {
     if (err) {
       return res.status(500).json({ error: 'DB 오류: ' + err.message })
     }
@@ -175,7 +175,7 @@ app.get('/pyramid', isAuthenticated, (req, res) => {
 app.get('/theme', (req, res) => {
   if (!req.session.user) return res.json({ theme: 'light' }) //기본값은 라이트모드
   const iduser = req.session.user.iduser
-  connection.query(
+  pool.query(
     'SELECT theme FROM user WHERE iduser = ?', //테마값을 조회
     [iduser],
     (err, results) => {
@@ -194,7 +194,7 @@ app.post('/theme', (req, res) => {
     return res.status(400).json({ error: '잘못된 테마' })
   const iduser = req.session.user.iduser
   const themeValue = theme === 'dark' ? 1 : 0
-  connection.query(
+  pool.query(
     'UPDATE user SET theme = ? WHERE iduser = ?', //테마값 업데이트
     // theme이 'dark'면 1, 'light'면 0으로 저장
     [themeValue, iduser],
