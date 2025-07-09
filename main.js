@@ -1,3 +1,56 @@
+// 비밀번호 찾기(재설정) 인증 및 변경 이벤트 처리
+const findpwVerifyBtn = document.getElementById('findpw-verify-code')
+const findpwResetBtn = document.getElementById('findpw-reset-btn')
+const findpwNewpwBox = document.getElementById('findpw-newpw-box')
+
+if (findpwVerifyBtn) {
+  findpwVerifyBtn.addEventListener('click', async () => {
+    const iduser = document.getElementById('findpw-id').value
+    const email = document.getElementById('findpw-email').value
+    const code = document.getElementById('findpw-code').value
+    if (!iduser || !email || !code)
+      return alert('아이디, 이메일, 인증코드를 모두 입력하세요.')
+    const res = await fetch('/verify-reset-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ iduser, email, code }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+    if (res.ok && data.message && data.message.includes('성공')) {
+      // 인증 성공 시 새 비밀번호 입력란 표시
+      if (findpwNewpwBox) findpwNewpwBox.style.display = 'block'
+      // 인증 타이머 숨기기
+      const timerElem = document.getElementById('findpw-email-timer')
+      if (timerElem) timerElem.style.display = 'none'
+      if (typeof findpwEmailTimer !== 'undefined' && findpwEmailTimer) {
+        clearInterval(findpwEmailTimer)
+      }
+    }
+  })
+}
+
+if (findpwResetBtn) {
+  findpwResetBtn.addEventListener('click', async () => {
+    const iduser = document.getElementById('findpw-id').value
+    const email = document.getElementById('findpw-email').value
+    const newpw = document.getElementById('findpw-newpw').value
+    if (!iduser || !email || !newpw)
+      return alert('아이디, 이메일, 새 비밀번호를 모두 입력하세요.')
+    const res = await fetch('/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ iduser, email, newPassword: newpw }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+    if (res.ok && data.message && data.message.includes('변경')) {
+      // 성공 시 폼 리셋 및 새 비밀번호 입력란 숨김
+      document.getElementById('findpw-form').reset()
+      if (findpwNewpwBox) findpwNewpwBox.style.display = 'none'
+    }
+  })
+}
 // 피라미드 생성을 위한 클래스 정의
 class Pyramid {
   // 생성자: 피라미드의 모양, 반복 횟수, 공백을 설정
@@ -256,7 +309,8 @@ if (findpwSendCodeBtn && findpwResendCodeBtn) {
   findpwSendCodeBtn.addEventListener('click', async () => {
     const iduser = document.getElementById('findpw-id').value
     const email = document.getElementById('findpw-email').value
-    if (!iduser || !email) return alert('아이디와 이메일을 모두 입력하세요.')
+    if (!iduser) return alert('아이디를 입력하세요.')
+    if (!email) return alert('이메일을 입력하세요.')
     const res = await fetch('/send-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -275,7 +329,8 @@ if (findpwSendCodeBtn && findpwResendCodeBtn) {
   findpwResendCodeBtn.addEventListener('click', async () => {
     const iduser = document.getElementById('findpw-id').value
     const email = document.getElementById('findpw-email').value
-    if (!iduser || !email) return alert('아이디와 이메일을 모두 입력하세요.')
+    if (!iduser) return alert('아이디를 입력하세요.')
+    if (!email) return alert('이메일을 입력하세요.')
     const res = await fetch('/send-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
