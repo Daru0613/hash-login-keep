@@ -58,17 +58,7 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
 })
 
 // 이메일 인증 코드 전송 및 확인 이벤트 처리
-document.getElementById('send-code-btn').addEventListener('click', async () => {
-  const email = document.getElementById('email').value
-  if (!email) return alert('이메일을 입력하세요.')
-  const res = await fetch('/send-verification', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  })
-  const data = await res.json()
-  alert(data.message || data.error)
-})
+// (중복 이벤트 방지: 아래에서 한 번만 등록)
 
 document
   .getElementById('verify-code-btn')
@@ -83,6 +73,25 @@ document
     })
     const data = await res.json()
     alert(data.message || data.error)
+    if (res.ok && data.message && data.message.includes('성공')) {
+      // 인증 성공 시 이메일 입력란을 readonly로 변경
+      const emailInput = document.getElementById('email')
+      if (emailInput) {
+        emailInput.readOnly = true
+        emailInput.style.background = '#e6ffe6'
+      }
+      // 인증완료 안내 메시지 표시
+      let verifyMsg = document.getElementById('email-verified-msg')
+      if (!verifyMsg) {
+        verifyMsg = document.createElement('div')
+        verifyMsg.id = 'email-verified-msg'
+        verifyMsg.style.color = '#1a7e1a'
+        verifyMsg.style.fontSize = '14px'
+        verifyMsg.style.margin = '4px 0 8px 0'
+        emailInput.parentNode.insertBefore(verifyMsg, emailInput.nextSibling)
+      }
+      verifyMsg.textContent = '이메일 인증이 완료되었습니다.'
+    }
   })
 
 // 회원가입 폼 제출 이벤트 처리
@@ -292,7 +301,13 @@ const sendCodeBtn = document.getElementById('send-code-btn')
 const resendCodeBtn = document.getElementById('resend-code-btn')
 
 if (sendCodeBtn && resendCodeBtn) {
-  sendCodeBtn.addEventListener('click', async () => {
+  // 기존 이벤트 리스너 제거를 위해 버튼을 복제 후 교체 (중복 방지)
+  const newSendBtn = sendCodeBtn.cloneNode(true)
+  sendCodeBtn.parentNode.replaceChild(newSendBtn, sendCodeBtn)
+  const newResendBtn = resendCodeBtn.cloneNode(true)
+  resendCodeBtn.parentNode.replaceChild(newResendBtn, resendCodeBtn)
+
+  newSendBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value
     if (!email) return alert('이메일을 입력하세요.')
     const res = await fetch('/send-verification', {
@@ -303,14 +318,14 @@ if (sendCodeBtn && resendCodeBtn) {
     const data = await res.json()
     alert(data.message || data.error)
     // 버튼 상태 변경
-    sendCodeBtn.disabled = true
-    sendCodeBtn.style.display = 'none'
-    resendCodeBtn.style.display = 'inline-block'
-    resendCodeBtn.disabled = false
+    newSendBtn.disabled = true
+    newSendBtn.style.display = 'none'
+    newResendBtn.style.display = 'inline-block'
+    newResendBtn.disabled = false
     startEmailTimer()
   })
 
-  resendCodeBtn.addEventListener('click', async () => {
+  newResendBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value
     if (!email) return alert('이메일을 입력하세요.')
     const res = await fetch('/send-verification', {
