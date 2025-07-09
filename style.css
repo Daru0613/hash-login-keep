@@ -27,10 +27,27 @@ input {
 }
 
 .login,
-.password {
+.password,
+.email,
+.email-verify {
   width: 100%;
   margin-bottom: 5px;
   text-align: center;
+}
+
+.email,
+.email-verify {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.email input,
+.email-verify input {
+  flex: 1;
+  min-width: 0;
+  margin-right: 8px;
 }
 
 a {
@@ -48,6 +65,24 @@ a {
   border-radius: 4px;
   font-size: 16px;
   margin-top: 10px;
+}
+
+#send-code-btn,
+#verify-code-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#send-code-btn:hover,
+#verify-code-btn:hover {
+  background-color: #0056b3;
 }
 
 form {
@@ -174,4 +209,15 @@ body.dark .box {
   background: #222;
   border-color: #444;
   color: #f0f0f0;
+}
+
+body.dark #send-code-btn,
+body.dark #verify-code-btn {
+  background-color: #26096f;
+  color: #f0f0f0;
+}
+body.dark #send-code-btn:hover,
+body.dark #verify-code-btn:hover {
+  background-color: #536aee;
+  color: #fff;
 }

@@ -21,6 +21,23 @@
     </form>
     <br />
     <a href="signup.html">회원가입</a>
+    <div class="find-pw-box">
+      <h3>비밀번호 찾기</h3>
+      <form id="findpw-form">
+        <div class="email">
+          <input type="email" id="findpw-email" placeholder="이메일" required />
+          <button type="button" id="findpw-send-code">인증코드 발송</button>
+        </div>
+        <div class="email-verify">
+          <input type="text" id="findpw-code" placeholder="인증코드 입력" />
+          <button type="button" id="findpw-verify-code">인증 확인</button>
+        </div>
+        <div class="password" id="findpw-newpw-box" style="display: none">
+          <input type="password" id="findpw-newpw" placeholder="새 비밀번호" />
+          <button type="button" id="findpw-reset-btn">비밀번호 변경</button>
+        </div>
+      </form>
+    </div>
     <script src="main.js"></script>
   </body>
 </html>

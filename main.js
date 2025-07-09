@@ -57,6 +57,34 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   }
 })
 
+// 이메일 인증 코드 전송 및 확인 이벤트 처리
+document.getElementById('send-code-btn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value
+  if (!email) return alert('이메일을 입력하세요.')
+  const res = await fetch('/send-verification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json()
+  alert(data.message || data.error)
+})
+
+document
+  .getElementById('verify-code-btn')
+  .addEventListener('click', async () => {
+    const email = document.getElementById('email').value
+    const code = document.getElementById('emailCode').value
+    if (!email || !code) return alert('이메일과 인증코드를 입력하세요.')
+    const res = await fetch('/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+  })
+
 // 회원가입 폼 제출 이벤트 처리
 document
   .getElementById('signup-form')
@@ -183,3 +211,60 @@ if (themeBtn) {
 
 // 페이지 로드 시 서버에서 테마 적용
 applyThemeFromServer()
+
+// 비밀번호 찾기(이메일 인증 기반) 기능
+const findpwForm = document.getElementById('findpw-form')
+if (findpwForm) {
+  // 인증코드 발송
+  document
+    .getElementById('findpw-send-code')
+    .addEventListener('click', async () => {
+      const email = document.getElementById('findpw-email').value
+      if (!email) return alert('이메일을 입력하세요.')
+      const res = await fetch('/send-reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      alert(data.message || data.error)
+    })
+
+  // 인증코드 확인
+  document
+    .getElementById('findpw-verify-code')
+    .addEventListener('click', async () => {
+      const email = document.getElementById('findpw-email').value
+      const code = document.getElementById('findpw-code').value
+      if (!email || !code) return alert('이메일과 인증코드를 입력하세요.')
+      const res = await fetch('/verify-reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      })
+      const data = await res.json()
+      alert(data.message || data.error)
+      if (res.ok) {
+        document.getElementById('findpw-newpw-box').style.display = ''
+      }
+    })
+
+  // 비밀번호 재설정
+  document
+    .getElementById('findpw-reset-btn')
+    .addEventListener('click', async () => {
+      const email = document.getElementById('findpw-email').value
+      const newPassword = document.getElementById('findpw-newpw').value
+      if (!newPassword) return alert('새 비밀번호를 입력하세요.')
+      const res = await fetch('/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, newPassword }),
+      })
+      const data = await res.json()
+      alert(data.message || data.error)
+      if (res.ok && data.redirect) {
+        window.location.href = data.redirect
+      }
+    })
+}

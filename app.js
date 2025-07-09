@@ -205,6 +205,129 @@ app.post('/theme', (req, res) => {
   )
 })
 
+// 인증코드 생성 함수
+function generateCode(length = 6) {
+  // 6자리 숫자 코드 생성
+  return Math.random()
+    .toString()
+    .slice(2, 2 + length)
+}
+
+const transporter = require('./mailer') // mailer.js 불러오기
+
+app.post('/send-verification', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
+
+  const code = generateCode(6)
+
+  // 인증코드와 이메일을 세션에 저장 (DB에 저장해도 무방)
+  req.session.emailCode = code
+  req.session.emailTarget = email
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '이메일 인증코드',
+    text: `인증코드는 ${code} 입니다.`,
+  }
+
+  try {
+    await transporter.sendMail(mailOptions)
+    res.json({ message: '인증코드가 발송되었습니다.' })
+  } catch (err) {
+    res.status(500).json({ error: '메일 발송 실패: ' + err.message })
+  }
+})
+
+// 인증코드 검증 라우트
+app.post('/verify-code', (req, res) => {
+  const { email, code } = req.body
+  if (
+    req.session.emailCode &&
+    req.session.emailTarget === email &&
+    req.session.emailCode === code
+  ) {
+    // 인증 성공: DB에 email_verified 컬럼 업데이트 등
+    delete req.session.emailCode
+    delete req.session.emailTarget
+    res.json({ message: '이메일 인증 성공' })
+  } else {
+    res.status(400).json({ error: '인증코드가 일치하지 않습니다.' })
+  }
+})
+
+// 비밀번호 재설정: 인증코드 발송
+app.post('/send-reset-code', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
+  // 해당 이메일이 DB에 존재하는지 확인
+  pool.query(
+    'SELECT * FROM user WHERE email = ?',
+    [email],
+    async (err, results) => {
+      if (err) return res.status(500).json({ error: 'DB 오류: ' + err.message })
+      if (results.length === 0)
+        return res.status(404).json({ error: '등록되지 않은 이메일입니다.' })
+      const code = generateCode(6)
+      req.session.resetEmail = email
+      req.session.resetCode = code
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: '비밀번호 재설정 인증코드',
+        text: `비밀번호 재설정 인증코드는 ${code} 입니다.`,
+      }
+      try {
+        await transporter.sendMail(mailOptions)
+        res.json({ message: '인증코드가 발송되었습니다.' })
+      } catch (err) {
+        res.status(500).json({ error: '메일 발송 실패: ' + err.message })
+      }
+    }
+  )
+})
+
+// 비밀번호 재설정: 인증코드 검증
+app.post('/verify-reset-code', (req, res) => {
+  const { email, code } = req.body
+  if (req.session.resetEmail === email && req.session.resetCode === code) {
+    req.session.resetVerified = true
+    res.json({ message: '인증 성공' })
+  } else {
+    res.status(400).json({ error: '인증코드가 일치하지 않습니다.' })
+  }
+})
+
+// 비밀번호 재설정: 새 비밀번호 저장
+app.post('/reset-password', async (req, res) => {
+  const { email, newPassword } = req.body
+  if (!req.session.resetVerified || req.session.resetEmail !== email) {
+    return res.status(400).json({ error: '이메일 인증이 필요합니다.' })
+  }
+  try {
+    const hashed = await bcrypt.hash(newPassword, 10)
+    pool.query(
+      'UPDATE user SET userpw = ? WHERE email = ?',
+      [hashed, email],
+      (err, result) => {
+        if (err)
+          return res.status(500).json({ error: 'DB 오류: ' + err.message })
+        // 인증 관련 세션 삭제
+        delete req.session.resetEmail
+        delete req.session.resetCode
+        delete req.session.resetVerified
+        res.json({
+          message: '비밀번호가 성공적으로 변경되었습니다.',
+          redirect: '/',
+        })
+      }
+    )
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류: ' + err.message })
+  }
+})
+
 // 정적 파일 제공 (index.html, signup.html, style.css, main.js 등)
 app.use(express.static(__dirname, { index: false }))
 
