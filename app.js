@@ -84,23 +84,91 @@ app.get('/signup', (req, res) => {
   res.sendFile(path.join(__dirname, 'signup.html'))
 })
 
-// POST: 회원가입 처리
-app.post('/signup', async (req, res) => {
-  const { iduser, userpw } = req.body
-  if (!iduser || !userpw) {
-    return res.status(400).json({ error: 'ID와 비밀번호를 입력하시오.' })
+// 인증코드 생성 함수
+function generateCode(length = 6) {
+  // 6자리 숫자 코드 생성
+  return Math.random()
+    .toString()
+    .slice(2, 2 + length)
+}
+
+// 인증코드 유효시간(1분) 체크 함수
+function isCodeValid(sessionKey, req) {
+  const now = Date.now()
+  const codeTime = req.session[sessionKey + 'Time']
+  return codeTime && now - codeTime < 3 * 60 * 1000 // 3분 이내
+}
+
+const transporter = require('./mailer') // mailer.js 불러오기
+
+// 회원가입: 인증코드 발송
+app.post('/send-verification', async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
+  const code = generateCode(6)
+  req.session.emailCode = code
+  req.session.emailTarget = email
+  req.session.emailCodeTime = Date.now()
+  req.session.emailVerified = false
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '이메일 인증코드',
+    text: `인증코드는 ${code} 입니다.`,
   }
   try {
-    const hashedPassword = await bcrypt.hash(userpw, 10) //비밀번호 해싱(10=보안강도)
-    const query = 'INSERT INTO users (iduser, userpw) VALUES (?, ?)' // user → users
-    pool.query(query, [iduser, hashedPassword], (err, result) => {
-      //쿼리에 iduser와 해싱된 비밀번호 삽입
+    await transporter.sendMail(mailOptions)
+    res.json({ message: '인증코드가 발송되었습니다.' })
+  } catch (err) {
+    res.status(500).json({ error: '메일 발송 실패: ' + err.message })
+  }
+})
+
+// 회원가입: 인증코드 검증
+app.post('/verify-code', (req, res) => {
+  const { email, code } = req.body
+  if (
+    req.session.emailCode &&
+    req.session.emailTarget === email &&
+    req.session.emailCode === code &&
+    isCodeValid('emailCode', req)
+  ) {
+    req.session.emailVerified = true
+    delete req.session.emailCode
+    delete req.session.emailTarget
+    delete req.session.emailCodeTime
+    res.json({ message: '이메일 인증 성공' })
+  } else if (!isCodeValid('emailCode', req)) {
+    res
+      .status(400)
+      .json({ error: '인증코드가 만료되었습니다. 재발송 해주세요.' })
+  } else {
+    res.status(400).json({ error: '인증코드가 일치하지 않습니다.' })
+  }
+})
+
+// 회원가입 처리(이메일 인증 필수)
+app.post('/signup', async (req, res) => {
+  const { iduser, userpw, email } = req.body
+  if (!iduser || !userpw || !email) {
+    return res.status(400).json({ error: 'ID, 비밀번호, 이메일을 입력하시오.' })
+  }
+  if (!req.session.emailVerified || req.session.emailTarget !== email) {
+    return res.status(400).json({ error: '이메일 인증을 완료해주십시오.' })
+  }
+  try {
+    const hashedPassword = await bcrypt.hash(userpw, 10)
+    const query = 'INSERT INTO users (iduser, userpw, email) VALUES (?, ?, ?)'
+    pool.query(query, [iduser, hashedPassword, email], (err, result) => {
       if (err) {
         if (err.code === 'ER_DUP_ENTRY') {
           return res.status(400).json({ error: 'ID가 중복되었습니다.' })
         }
         return res.status(500).json({ error: 'DB 오류: ' + err.message })
       }
+      // 회원가입 성공 시 인증 관련 세션 삭제
+      delete req.session.emailVerified
+      delete req.session.emailTarget
       res.status(201).json({ message: '회원가입 완료', redirect: '/' })
     })
   } catch (err) {
@@ -205,58 +273,6 @@ app.post('/theme', (req, res) => {
   )
 })
 
-// 인증코드 생성 함수
-function generateCode(length = 6) {
-  // 6자리 숫자 코드 생성
-  return Math.random()
-    .toString()
-    .slice(2, 2 + length)
-}
-
-const transporter = require('./mailer') // mailer.js 불러오기
-
-app.post('/send-verification', async (req, res) => {
-  const { email } = req.body
-  if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
-
-  const code = generateCode(6)
-
-  // 인증코드와 이메일을 세션에 저장 (DB에 저장해도 무방)
-  req.session.emailCode = code
-  req.session.emailTarget = email
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: '이메일 인증코드',
-    text: `인증코드는 ${code} 입니다.`,
-  }
-
-  try {
-    await transporter.sendMail(mailOptions)
-    res.json({ message: '인증코드가 발송되었습니다.' })
-  } catch (err) {
-    res.status(500).json({ error: '메일 발송 실패: ' + err.message })
-  }
-})
-
-// 인증코드 검증 라우트
-app.post('/verify-code', (req, res) => {
-  const { email, code } = req.body
-  if (
-    req.session.emailCode &&
-    req.session.emailTarget === email &&
-    req.session.emailCode === code
-  ) {
-    // 인증 성공: DB에 email_verified 컬럼 업데이트 등
-    delete req.session.emailCode
-    delete req.session.emailTarget
-    res.json({ message: '이메일 인증 성공' })
-  } else {
-    res.status(400).json({ error: '인증코드가 일치하지 않습니다.' })
-  }
-})
-
 // 비밀번호 재설정: 인증코드 발송
 app.post('/send-reset-code', async (req, res) => {
   const { email } = req.body
@@ -272,6 +288,8 @@ app.post('/send-reset-code', async (req, res) => {
       const code = generateCode(6)
       req.session.resetEmail = email
       req.session.resetCode = code
+      req.session.resetCodeTime = Date.now()
+      req.session.resetVerified = false
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
@@ -288,18 +306,28 @@ app.post('/send-reset-code', async (req, res) => {
   )
 })
 
-// 비밀번호 재설정: 인증코드 검증
+// 비밀번호 찾기: 인증코드 검증
 app.post('/verify-reset-code', (req, res) => {
   const { email, code } = req.body
-  if (req.session.resetEmail === email && req.session.resetCode === code) {
+  if (
+    req.session.resetEmail === email &&
+    req.session.resetCode === code &&
+    isCodeValid('resetCode', req)
+  ) {
     req.session.resetVerified = true
+    delete req.session.resetCode
+    delete req.session.resetCodeTime
     res.json({ message: '인증 성공' })
+  } else if (!isCodeValid('resetCode', req)) {
+    res
+      .status(400)
+      .json({ error: '인증코드가 만료되었습니다. 재발송 해주세요.' })
   } else {
     res.status(400).json({ error: '인증코드가 일치하지 않습니다.' })
   }
 })
 
-// 비밀번호 재설정: 새 비밀번호 저장
+// 비밀번호 재설정: 새 비밀번호 저장(이메일 인증 필수)
 app.post('/reset-password', async (req, res) => {
   const { email, newPassword } = req.body
   if (!req.session.resetVerified || req.session.resetEmail !== email) {
@@ -308,14 +336,13 @@ app.post('/reset-password', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(newPassword, 10)
     pool.query(
-      'UPDATE users SET userpw = ? WHERE email = ?', // user → users
+      'UPDATE users SET userpw = ? WHERE email = ?',
       [hashed, email],
       (err, result) => {
         if (err)
           return res.status(500).json({ error: 'DB 오류: ' + err.message })
         // 인증 관련 세션 삭제
         delete req.session.resetEmail
-        delete req.session.resetCode
         delete req.session.resetVerified
         res.json({
           message: '비밀번호가 성공적으로 변경되었습니다.',

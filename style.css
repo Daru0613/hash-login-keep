@@ -26,28 +26,56 @@ input {
   margin: 2px;
 }
 
+/* 입력란 wrapper: 모두 동일한 width와 중앙정렬 */
 .login,
 .password,
 .email,
 .email-verify {
   width: 100%;
-  margin-bottom: 5px;
+  max-width: 260px;
+  margin: 0 auto 8px auto;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.email,
-.email-verify {
+/* 모든 입력란 input: 동일한 width, block 배치 */
+.login input,
+.password input,
+.email input,
+.email-verify input {
+  width: 100%;
+  max-width: 260px;
+  box-sizing: border-box;
+  margin: 0 0 6px 0;
+  display: block;
+}
+
+/* 인증 관련 버튼/타이머: 입력란 아래 block 배치, wrapper로 정렬 */
+.email-action-block,
+.email-verify-action-block {
+  width: 100%;
+  max-width: 260px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-bottom: 8px;
 }
 
-.email input,
-.email-verify input {
-  flex: 1;
-  min-width: 0;
-  margin-right: 8px;
+#send-code-btn,
+#verify-code-btn,
+#resend-code-btn,
+.email-timer {
+  margin: 0 6px 0 0;
+  display: block;
+}
+
+.email-timer {
+  min-width: 80px;
+  text-align: left;
+  margin: 0 0 0 0;
 }
 
 a {
@@ -220,4 +248,38 @@ body.dark #send-code-btn:hover,
 body.dark #verify-code-btn:hover {
   background-color: #536aee;
   color: #fff;
+}
+
+.email-timer {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #555;
+  min-width: 120px;
+  text-align: left;
+}
+
+#resend-code-btn {
+  margin-left: 5px;
+  background-color: #f5f5f5;
+  color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: inline-block;
+}
+#resend-code-btn:disabled {
+  background: #eee;
+  color: #aaa;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+body.dark #resend-code-btn {
+  background: #222;
+  color: #90caf9;
+  border-color: #90caf9;
+}
+body.dark .email-timer {
+  color: #90caf9;
 }

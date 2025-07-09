@@ -92,13 +92,14 @@ document
     e.preventDefault() // 폼의 기본 제출 동작 방지
     const iduser = document.getElementById('userID').value // 입력된 ID
     const userpw = document.getElementById('pw').value // 입력된 비밀번호
+    const email = document.getElementById('email').value // 입력된 이메일
 
     try {
       // 서버에 POST /signup 요청 보내기
       const response = await fetch('/signup', {
         method: 'POST', // POST 메서드 사용
         headers: { 'Content-Type': 'application/json' }, // JSON 형식으로 전송
-        body: JSON.stringify({ iduser, userpw }), // ID와 비밀번호를 JSON으로 변환
+        body: JSON.stringify({ iduser, userpw, email }), // ID, 비밀번호, 이메일을 JSON으로 변환
       })
       const result = await response.json() // 서버 응답을 JSON으로 파싱
       alert(result.message || result.error) // 성공/에러 메시지를 alert로 표시
@@ -213,58 +214,113 @@ if (themeBtn) {
 applyThemeFromServer()
 
 // 비밀번호 찾기(이메일 인증 기반) 기능
-const findpwForm = document.getElementById('findpw-form')
-if (findpwForm) {
-  // 인증코드 발송
-  document
-    .getElementById('findpw-send-code')
-    .addEventListener('click', async () => {
-      const email = document.getElementById('findpw-email').value
-      if (!email) return alert('이메일을 입력하세요.')
-      const res = await fetch('/send-reset-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-      alert(data.message || data.error)
-    })
+let findpwEmailTimer = null
+let findpwEmailTimeLeft = 180
 
-  // 인증코드 확인
-  document
-    .getElementById('findpw-verify-code')
-    .addEventListener('click', async () => {
-      const email = document.getElementById('findpw-email').value
-      const code = document.getElementById('findpw-code').value
-      if (!email || !code) return alert('이메일과 인증코드를 입력하세요.')
-      const res = await fetch('/verify-reset-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      })
-      const data = await res.json()
-      alert(data.message || data.error)
-      if (res.ok) {
-        document.getElementById('findpw-newpw-box').style.display = ''
-      }
-    })
+function startFindpwEmailTimer() {
+  clearInterval(findpwEmailTimer)
+  findpwEmailTimeLeft = 180
+  const timerElem = document.getElementById('findpw-email-timer')
+  timerElem.textContent = `남은 시간: ${findpwEmailTimeLeft}초`
+  findpwEmailTimer = setInterval(() => {
+    findpwEmailTimeLeft--
+    timerElem.textContent = `남은 시간: ${findpwEmailTimeLeft}초`
+    if (findpwEmailTimeLeft <= 0) {
+      clearInterval(findpwEmailTimer)
+      timerElem.textContent = '인증코드가 만료되었습니다.'
+    }
+  }, 1000)
+}
 
-  // 비밀번호 재설정
-  document
-    .getElementById('findpw-reset-btn')
-    .addEventListener('click', async () => {
-      const email = document.getElementById('findpw-email').value
-      const newPassword = document.getElementById('findpw-newpw').value
-      if (!newPassword) return alert('새 비밀번호를 입력하세요.')
-      const res = await fetch('/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, newPassword }),
-      })
-      const data = await res.json()
-      alert(data.message || data.error)
-      if (res.ok && data.redirect) {
-        window.location.href = data.redirect
-      }
+const findpwSendCodeBtn = document.getElementById('findpw-send-code')
+const findpwResendCodeBtn = document.getElementById('findpw-resend-code')
+
+if (findpwSendCodeBtn && findpwResendCodeBtn) {
+  findpwSendCodeBtn.addEventListener('click', async () => {
+    const email = document.getElementById('findpw-email').value
+    if (!email) return alert('이메일을 입력하세요.')
+    const res = await fetch('/send-reset-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
+    const data = await res.json()
+    alert(data.message || data.error)
+    // 버튼 상태 변경
+    findpwSendCodeBtn.disabled = true
+    findpwSendCodeBtn.style.display = 'none'
+    findpwResendCodeBtn.style.display = 'inline-block'
+    findpwResendCodeBtn.disabled = false
+    startFindpwEmailTimer()
+  })
+
+  findpwResendCodeBtn.addEventListener('click', async () => {
+    const email = document.getElementById('findpw-email').value
+    if (!email) return alert('이메일을 입력하세요.')
+    const res = await fetch('/send-reset-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+    // 재발송 시 타이머 리셋, 기존 코드 만료(백엔드에서 처리)
+    startFindpwEmailTimer()
+  })
+}
+
+// 이메일 인증 타이머 및 버튼 상태 관리
+let emailTimer = null
+let emailTimeLeft = 180 // 3분
+
+function startEmailTimer() {
+  clearInterval(emailTimer)
+  emailTimeLeft = 180
+  const timerElem = document.getElementById('email-timer')
+  timerElem.textContent = `남은 시간: ${emailTimeLeft}초`
+  emailTimer = setInterval(() => {
+    emailTimeLeft--
+    timerElem.textContent = `남은 시간: ${emailTimeLeft}초`
+    if (emailTimeLeft <= 0) {
+      clearInterval(emailTimer)
+      timerElem.textContent = '인증코드가 만료되었습니다.'
+    }
+  }, 1000)
+}
+
+const sendCodeBtn = document.getElementById('send-code-btn')
+const resendCodeBtn = document.getElementById('resend-code-btn')
+
+if (sendCodeBtn && resendCodeBtn) {
+  sendCodeBtn.addEventListener('click', async () => {
+    const email = document.getElementById('email').value
+    if (!email) return alert('이메일을 입력하세요.')
+    const res = await fetch('/send-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+    // 버튼 상태 변경
+    sendCodeBtn.disabled = true
+    sendCodeBtn.style.display = 'none'
+    resendCodeBtn.style.display = 'inline-block'
+    resendCodeBtn.disabled = false
+    startEmailTimer()
+  })
+
+  resendCodeBtn.addEventListener('click', async () => {
+    const email = document.getElementById('email').value
+    if (!email) return alert('이메일을 입력하세요.')
+    const res = await fetch('/send-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+    alert(data.message || data.error)
+    // 재발송 시 타이머 리셋, 기존 코드 만료(백엔드에서 처리)
+    startEmailTimer()
+  })
 }

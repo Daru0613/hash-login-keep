@@ -27,6 +27,10 @@
         <div class="email">
           <input type="email" id="findpw-email" placeholder="이메일" required />
           <button type="button" id="findpw-send-code">인증코드 발송</button>
+          <button type="button" id="findpw-resend-code" style="display: none">
+            재발송
+          </button>
+          <span id="findpw-email-timer" class="email-timer"></span>
         </div>
         <div class="email-verify">
           <input type="text" id="findpw-code" placeholder="인증코드 입력" />

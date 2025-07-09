@@ -20,6 +20,10 @@
       <div class="email">
         <input type="email" id="email" placeholder="이메일" required />
         <button type="button" id="send-code-btn">인증코드 발송</button>
+        <button type="button" id="resend-code-btn" style="display: none">
+          재발송
+        </button>
+        <span id="email-timer" class="email-timer"></span>
       </div>
       <div class="email-verify">
         <input type="text" id="emailCode" placeholder="인증코드 입력" />
