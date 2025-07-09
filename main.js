@@ -254,12 +254,13 @@ const findpwResendCodeBtn = document.getElementById('findpw-resend-code')
 
 if (findpwSendCodeBtn && findpwResendCodeBtn) {
   findpwSendCodeBtn.addEventListener('click', async () => {
+    const iduser = document.getElementById('findpw-id').value
     const email = document.getElementById('findpw-email').value
-    if (!email) return alert('이메일을 입력하세요.')
+    if (!iduser || !email) return alert('아이디와 이메일을 모두 입력하세요.')
     const res = await fetch('/send-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ iduser, email }),
     })
     const data = await res.json()
     alert(data.message || data.error)
@@ -272,12 +273,13 @@ if (findpwSendCodeBtn && findpwResendCodeBtn) {
   })
 
   findpwResendCodeBtn.addEventListener('click', async () => {
+    const iduser = document.getElementById('findpw-id').value
     const email = document.getElementById('findpw-email').value
-    if (!email) return alert('이메일을 입력하세요.')
+    if (!iduser || !email) return alert('아이디와 이메일을 모두 입력하세요.')
     const res = await fetch('/send-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ iduser, email }),
     })
     const data = await res.json()
     alert(data.message || data.error)

@@ -276,19 +276,21 @@ app.post('/theme', (req, res) => {
   )
 })
 
-// 비밀번호 재설정: 인증코드 발송
+// 비밀번호 재설정: 인증코드 발송 (아이디와 이메일 모두 입력)
 app.post('/send-reset-code', async (req, res) => {
-  const { email } = req.body
-  if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
-  // 해당 이메일이 DB에 존재하는지 확인
+  const { iduser, email } = req.body
+  if (!iduser || !email)
+    return res.status(400).json({ error: 'ID와 이메일을 모두 입력하세요.' })
+  // 해당 아이디와 이메일이 DB에 존재하는지 확인
   pool.query(
-    'SELECT * FROM users WHERE email = ?',
-    [email],
+    'SELECT * FROM users WHERE iduser = ? AND email = ?',
+    [iduser, email],
     async (err, results) => {
       if (err) return res.status(500).json({ error: 'DB 오류: ' + err.message })
       if (results.length === 0)
-        return res.status(404).json({ error: '등록되지 않은 이메일입니다.' })
+        return res.status(404).json({ error: '일치하는 계정이 없습니다.' })
       const code = generateCode(6)
+      req.session.resetId = iduser
       req.session.resetEmail = email
       req.session.resetCode = code
       req.session.resetCodeTime = Date.now()
@@ -309,10 +311,11 @@ app.post('/send-reset-code', async (req, res) => {
   )
 })
 
-// 비밀번호 찾기: 인증코드 검증
+// 비밀번호 찾기: 인증코드 검증 (아이디와 이메일 모두 확인)
 app.post('/verify-reset-code', (req, res) => {
-  const { email, code } = req.body
+  const { iduser, email, code } = req.body
   if (
+    req.session.resetId === iduser &&
     req.session.resetEmail === email &&
     req.session.resetCode === code &&
     isCodeValid('resetCode', req)
@@ -330,21 +333,26 @@ app.post('/verify-reset-code', (req, res) => {
   }
 })
 
-// 비밀번호 재설정: 새 비밀번호 저장(이메일 인증 필수)
+// 비밀번호 재설정: 새 비밀번호 저장(아이디, 이메일 인증 필수)
 app.post('/reset-password', async (req, res) => {
-  const { email, newPassword } = req.body
-  if (!req.session.resetVerified || req.session.resetEmail !== email) {
+  const { iduser, email, newPassword } = req.body
+  if (
+    !req.session.resetVerified ||
+    req.session.resetId !== iduser ||
+    req.session.resetEmail !== email
+  ) {
     return res.status(400).json({ error: '이메일 인증이 필요합니다.' })
   }
   try {
     const hashed = await bcrypt.hash(newPassword, 10)
     pool.query(
-      'UPDATE users SET userpw = ? WHERE email = ?',
-      [hashed, email],
+      'UPDATE users SET userpw = ? WHERE iduser = ? AND email = ?',
+      [hashed, iduser, email],
       (err, result) => {
         if (err)
           return res.status(500).json({ error: 'DB 오류: ' + err.message })
         // 인증 관련 세션 삭제
+        delete req.session.resetId
         delete req.session.resetEmail
         delete req.session.resetVerified
         res.json({
