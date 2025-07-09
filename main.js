@@ -91,6 +91,14 @@ document
         emailInput.parentNode.insertBefore(verifyMsg, emailInput.nextSibling)
       }
       verifyMsg.textContent = '이메일 인증이 완료되었습니다.'
+      // 인증 성공 시 타이머 숨기기 및 중지
+      const timerElem = document.getElementById('email-timer')
+      if (timerElem) {
+        timerElem.style.display = 'none'
+      }
+      if (typeof emailTimer !== 'undefined' && emailTimer) {
+        clearInterval(emailTimer)
+      }
     }
   })
 

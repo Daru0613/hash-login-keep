@@ -134,9 +134,10 @@ app.post('/verify-code', (req, res) => {
     isCodeValid('emailCode', req)
   ) {
     req.session.emailVerified = true
-    delete req.session.emailCode
-    delete req.session.emailTarget
-    delete req.session.emailCodeTime
+    // 인증 성공 시 인증코드 관련 세션은 남겨둔다 (회원가입까지 유지)
+    // delete req.session.emailCode
+    // delete req.session.emailTarget
+    // delete req.session.emailCodeTime
     res.json({ message: '이메일 인증 성공' })
   } else if (!isCodeValid('emailCode', req)) {
     res
@@ -166,9 +167,11 @@ app.post('/signup', async (req, res) => {
         }
         return res.status(500).json({ error: 'DB 오류: ' + err.message })
       }
-      // 회원가입 성공 시 인증 관련 세션 삭제
+      // 회원가입 성공 시 인증 관련 세션 및 인증코드 세션 삭제
       delete req.session.emailVerified
       delete req.session.emailTarget
+      delete req.session.emailCode
+      delete req.session.emailCodeTime
       res.status(201).json({ message: '회원가입 완료', redirect: '/' })
     })
   } catch (err) {
