@@ -92,7 +92,7 @@ app.post('/signup', async (req, res) => {
   }
   try {
     const hashedPassword = await bcrypt.hash(userpw, 10) //비밀번호 해싱(10=보안강도)
-    const query = 'INSERT INTO user (iduser, userpw) VALUES (?, ?)'
+    const query = 'INSERT INTO users (iduser, userpw) VALUES (?, ?)' // user → users
     pool.query(query, [iduser, hashedPassword], (err, result) => {
       //쿼리에 iduser와 해싱된 비밀번호 삽입
       if (err) {
@@ -114,7 +114,7 @@ app.post('/login', (req, res) => {
   if (!iduser || !userpw) {
     return res.status(400).json({ error: 'ID와 비밀번호를 입력하시오.' })
   }
-  const query = 'SELECT * FROM user WHERE iduser = ?'
+  const query = 'SELECT * FROM users WHERE iduser = ?' // user → users
   pool.query(query, [iduser], async (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'DB 오류: ' + err.message })
@@ -147,7 +147,7 @@ app.get('/logout', (req, res) => {
 // DELETE: 회원탈퇴 처리
 app.delete('/user', isAuthenticated, (req, res) => {
   const { iduser } = req.session.user
-  const query = 'DELETE FROM user WHERE iduser = ?' //iduser로 회원탈퇴
+  const query = 'DELETE FROM users WHERE iduser = ?' // user → users
   pool.query(query, [iduser], (err) => {
     if (err) {
       return res.status(500).json({ error: 'DB 오류: ' + err.message })
@@ -176,7 +176,7 @@ app.get('/theme', (req, res) => {
   if (!req.session.user) return res.json({ theme: 'light' }) //기본값은 라이트모드
   const iduser = req.session.user.iduser
   pool.query(
-    'SELECT theme FROM user WHERE iduser = ?', //테마값을 조회
+    'SELECT theme FROM users WHERE iduser = ?', // user → users
     [iduser],
     (err, results) => {
       if (err || results.length === 0) return res.json({ theme: 'light' }) //조회 실패 또는 결과가 0일 경우 라이트모드로
@@ -195,7 +195,7 @@ app.post('/theme', (req, res) => {
   const iduser = req.session.user.iduser
   const themeValue = theme === 'dark' ? 1 : 0
   pool.query(
-    'UPDATE user SET theme = ? WHERE iduser = ?', //테마값 업데이트
+    'UPDATE users SET theme = ? WHERE iduser = ?', // user → users
     // theme이 'dark'면 1, 'light'면 0으로 저장
     [themeValue, iduser],
     (err) => {
@@ -263,7 +263,7 @@ app.post('/send-reset-code', async (req, res) => {
   if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' })
   // 해당 이메일이 DB에 존재하는지 확인
   pool.query(
-    'SELECT * FROM user WHERE email = ?',
+    'SELECT * FROM users WHERE email = ?',
     [email],
     async (err, results) => {
       if (err) return res.status(500).json({ error: 'DB 오류: ' + err.message })
@@ -308,7 +308,7 @@ app.post('/reset-password', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(newPassword, 10)
     pool.query(
-      'UPDATE user SET userpw = ? WHERE email = ?',
+      'UPDATE users SET userpw = ? WHERE email = ?', // user → users
       [hashed, email],
       (err, result) => {
         if (err)
